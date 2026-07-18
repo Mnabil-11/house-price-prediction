@@ -19,8 +19,9 @@ An end-to-end machine learning project that predicts a house's sale price from i
 - [Running with Docker](#running-with-docker)
 - [Key design decisions](#key-design-decisions)
 - [Progress](#progress)
+- 📄 **[Read the full technical report](./MODEL_CARD.md)** — problem     statement, data handling rationale, model comparison, and honest discussion of limitations.
 
-## Overview
+## Overview  
 
 Given a house's characteristics (size, quality, location, age, garage, ...), the API returns a predicted sale price. The project covers the full lifecycle of a small ML product:
 
