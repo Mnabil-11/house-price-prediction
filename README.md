@@ -20,8 +20,11 @@ house-price/
 ├── api/
 │   ├── main.py           # FastAPI app (/predict endpoint)
 │   ├── schemas.py        # request/response models
-│   └── preprocessing.py  # turns raw input into model-ready features
+│   ├── preprocessing.py  # turns raw input into model-ready features
+│   └── test_client.py    # example of calling the API from Python
 ├── requirements.txt
+├── Dockerfile
+├── .dockerignore
 └── README.md
 ```
 
@@ -42,6 +45,15 @@ curl -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" -
   "FullBath": 2, "GarageCars": 2, "GarageArea": 480
 }'
 ```
+
+## Running with Docker
+
+```
+docker build -t house-price-api:1.1 .
+docker run -d --name house-price-container -p 8000:8000 house-price-api:1.1
+```
+
+Then the API is available at http://127.0.0.1:8000/docs exactly like the local run above.
 
 ## Model results
 
@@ -64,7 +76,7 @@ curl -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" -
 - [x] Model training and comparison
 - [x] Save best model
 - [x] FastAPI service
-- [ ] Docker
+- [x] Docker
 - [ ] Deployment
 
 More details will be added as the project progresses.

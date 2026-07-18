@@ -1,0 +1,16 @@
+# Not needed to serve the API -- keeps the build context small and fast
+.git
+data/
+notebooks/
+*.md
+
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+.env
+
+.vscode/
+.claude/
