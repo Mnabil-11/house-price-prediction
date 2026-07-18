@@ -17,7 +17,30 @@ house-price/
 ├── models/
 │   ├── xgboost_model.pkl     # final trained model
 │   └── feature_columns.json  # feature order expected by the model
+├── api/
+│   ├── main.py           # FastAPI app (/predict endpoint)
+│   ├── schemas.py        # request/response models
+│   └── preprocessing.py  # turns raw input into model-ready features
+├── requirements.txt
 └── README.md
+```
+
+## Running the API
+
+```
+pip install -r requirements.txt
+cd api
+uvicorn main:app --reload
+```
+
+Then open http://127.0.0.1:8000/docs for the interactive Swagger UI, or POST house features to `/predict`:
+
+```bash
+curl -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" -d '{
+  "OverallQual": 8, "GrLivArea": 1800, "YearBuilt": 2005,
+  "TotalBsmtSF": 900, "1stFlrSF": 900, "2ndFlrSF": 900,
+  "FullBath": 2, "GarageCars": 2, "GarageArea": 480
+}'
 ```
 
 ## Model results
@@ -40,7 +63,7 @@ house-price/
 - [x] Feature engineering
 - [x] Model training and comparison
 - [x] Save best model
-- [ ] FastAPI service
+- [x] FastAPI service
 - [ ] Docker
 - [ ] Deployment
 
