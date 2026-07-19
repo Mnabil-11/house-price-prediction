@@ -21,6 +21,7 @@ An end-to-end machine learning project that predicts a house's sale price from i
 - [Using the API](#using-the-api)
 - [Running with Docker](#running-with-docker)
 - [Key design decisions](#key-design-decisions)
+- [Limitations](#limitations)
 - [Progress](#progress)
 - 📄 **[Read the full technical report](./MODEL_CARD.md)** — problem     statement, data handling rationale, model comparison, and honest discussion of limitations.
 
@@ -147,6 +148,14 @@ The API is then available at http://127.0.0.1:8000/docs exactly like the local r
 - **Input validation with headroom**: the API's `ge`/`le` bounds match the actual min/max seen in training, because tree-based models like XGBoost can't reliably extrapolate beyond the range they were trained on — bounding the input turns a silent, misleading prediction into an explicit 422 error.
 - **Docker layer caching**: `requirements.txt` is copied and installed before the application code, so code-only changes don't force a full dependency reinstall on rebuild.
 - **Lean image**: `xgboost`'s wheel pulls in a ~300MB GPU dependency (`nvidia-nccl-cu12`) that this CPU-only API never uses; it's installed and removed in the same Docker layer, cutting the final image from 1.8GB to 1.1GB.
+
+## Limitations
+
+- **Geographically and temporally narrow training data**: the model is trained on Ames, Iowa house sales from 2006–2010. Predictions for houses in other markets, or for the current year, are not reliable without retraining on local, up-to-date data — prices, construction norms, and neighborhood values shift over time and across locations.
+- **Not a substitute for a professional appraisal**: this is a statistical estimate from historical patterns, not a certified valuation. It doesn't account for factors the dataset can't capture (recent renovations not reflected in the training era, local market conditions, negotiation, unique property defects, etc.).
+- **No automated tests or CI**: there's no `pytest` suite or CI pipeline yet, so regressions in the API or preprocessing logic wouldn't be caught automatically.
+- **No prediction-level explainability**: the API returns a single number with no breakdown of which features drove the estimate (e.g. no SHAP values).
+- **Free-tier hosting**: the live demo sleeps after inactivity, so the first request after a quiet period can take 30-60 seconds.
 
 ## Progress
 
