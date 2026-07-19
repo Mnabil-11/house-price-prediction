@@ -1,7 +1,7 @@
 """A small example of calling the API from Python instead of Swagger/curl.
 
 Run the server first (uvicorn main:app --reload), then in another terminal:
-    python test_client.py
+    python example_client.py
 """
 
 import requests

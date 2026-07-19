@@ -67,7 +67,8 @@ house-price/
 │   ├── main.py                      # FastAPI app (/predict endpoint)
 │   ├── schemas.py                   # request/response models + validation
 │   ├── preprocessing.py             # turns raw input into model-ready features
-│   └── test_client.py               # example of calling the API from Python
+│   ├── example_client.py             # example of calling the API from Python
+│   └── test_api.py                  # pytest suite for the API
 ├── requirements.txt
 ├── Dockerfile
 ├── .dockerignore
@@ -123,7 +124,7 @@ curl -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" -
 {"predicted_price": 158478.44, "predicted_price_log": 11.973}
 ```
 
-Or from Python (see `api/test_client.py` for a full example):
+Or from Python (see `api/example_client.py` for a full example):
 
 ```python
 import requests
