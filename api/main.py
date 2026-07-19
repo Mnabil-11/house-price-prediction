@@ -8,6 +8,7 @@ from fastapi import FastAPI
 
 from schemas import HouseFeatures, PredictionResponse
 from preprocessing import preprocess
+from explainer import build_explainer, top_contributions
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 MODEL_PATH = BASE_DIR / "models" / "xgboost_model.pkl"
@@ -15,10 +16,11 @@ MODEL_PATH = BASE_DIR / "models" / "xgboost_model.pkl"
 app = FastAPI(
     title="House Price Prediction API",
     description="Predicts a house's sale price from its features using a trained XGBoost model.",
-    version="1.0.0",
+    version="1.1.0",
 )
 
 model = joblib.load(MODEL_PATH)
+explainer = build_explainer(model)
 
 
 @app.get("/")
@@ -37,7 +39,10 @@ def predict(house: HouseFeatures):
     pred_log = model.predict(row)[0]
     pred_price = np.expm1(pred_log)  # undo the log1p transform from training
 
+    factors = top_contributions(explainer, row, pred_log, top_n=5)
+
     return PredictionResponse(
         predicted_price=round(float(pred_price), 2),
         predicted_price_log=float(pred_log),
+        top_factors=factors,
     )

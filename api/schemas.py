@@ -124,6 +124,12 @@ class HouseFeatures(BaseModel):
     })
 
 
+class FeatureContribution(BaseModel):
+    feature: str
+    impact_usd: float
+
+
 class PredictionResponse(BaseModel):
     predicted_price: float
     predicted_price_log: float
+    top_factors: list[FeatureContribution]

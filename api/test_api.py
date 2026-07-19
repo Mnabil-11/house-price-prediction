@@ -38,6 +38,17 @@ def test_predict_with_defaults_returns_a_price():
     assert body["predicted_price"] > 0
 
 
+def test_predict_includes_top_factors():
+    response = client.post("/predict", json={"OverallQual": 8, "GrLivArea": 1800})
+    body = response.json()
+    factors = body["top_factors"]
+    assert len(factors) == 5
+    assert {"feature", "impact_usd"} <= factors[0].keys()
+    # sorted by absolute impact, largest first
+    impacts = [abs(f["impact_usd"]) for f in factors]
+    assert impacts == sorted(impacts, reverse=True)
+
+
 def test_predict_higher_quality_house_costs_more():
     """A bigger, higher-quality house should predict a higher price than a
     smaller, lower-quality one -- a basic sanity check that the model responds

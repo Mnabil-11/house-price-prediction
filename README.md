@@ -67,6 +67,7 @@ house-price/
 │   ├── main.py                      # FastAPI app (/predict endpoint)
 │   ├── schemas.py                   # request/response models + validation
 │   ├── preprocessing.py             # turns raw input into model-ready features
+│   ├── explainer.py                  # per-prediction SHAP feature contributions
 │   ├── example_client.py             # example of calling the API from Python
 │   └── test_api.py                  # pytest suite for the API
 ├── requirements.txt
@@ -121,8 +122,20 @@ curl -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" -
 ```
 
 ```json
-{"predicted_price": 158478.44, "predicted_price_log": 11.973}
+{
+  "predicted_price": 158478.44,
+  "predicted_price_log": 11.973,
+  "top_factors": [
+    {"feature": "OverallQual", "impact_usd": 24512.68},
+    {"feature": "YearsSinceRemodel", "impact_usd": -7060.09},
+    {"feature": "Functional_Typ", "impact_usd": -5613.13},
+    {"feature": "TotalSF", "impact_usd": 5565.67},
+    {"feature": "Fireplaces", "impact_usd": -4030.85}
+  ]
+}
 ```
+
+`top_factors` shows the 5 features that most influenced this specific prediction (via SHAP), with an approximate dollar impact -- see [Key design decisions](#key-design-decisions) for how that's computed.
 
 Or from Python (see `api/example_client.py` for a full example):
 
@@ -138,8 +151,8 @@ print(response.json())
 ## Running with Docker
 
 ```bash
-docker build -t house-price-api:1.1 .
-docker run -d --name house-price-container --restart unless-stopped -p 8000:8000 house-price-api:1.1
+docker build -t house-price-api:1.3 .
+docker run -d --name house-price-container --restart unless-stopped -p 8000:8000 house-price-api:1.3
 ```
 
 The API is then available at http://127.0.0.1:8000/docs exactly like the local run above, isolated from whatever else is installed on the host machine.
@@ -162,13 +175,14 @@ The suite covers the basic endpoints, the `/predict` happy path, input validatio
 - **Input validation with headroom**: the API's `ge`/`le` bounds match the actual min/max seen in training, because tree-based models like XGBoost can't reliably extrapolate beyond the range they were trained on — bounding the input turns a silent, misleading prediction into an explicit 422 error.
 - **Docker layer caching**: `requirements.txt` is copied and installed before the application code, so code-only changes don't force a full dependency reinstall on rebuild.
 - **Lean image**: `xgboost`'s wheel pulls in a ~300MB GPU dependency (`nvidia-nccl-cu12`) that this CPU-only API never uses; it's installed and removed in the same Docker layer, cutting the final image from 1.8GB to 1.1GB.
+- **Per-prediction explainability via SHAP**: `TreeExplainer` gives exact feature attributions in the model's native log-space. Since `expm1` (used to convert back to dollars) is non-linear, each SHAP value is converted to an approximate dollar impact using a local linear approximation (scaling by `exp(predicted_log_price)`) rather than a mathematically exact dollar breakdown -- accurate enough to rank and explain the main drivers, called out explicitly as an approximation rather than presented as exact.
 
 ## Limitations
 
 - **Geographically and temporally narrow training data**: the model is trained on Ames, Iowa house sales from 2006–2010. Predictions for houses in other markets, or for the current year, are not reliable without retraining on local, up-to-date data — prices, construction norms, and neighborhood values shift over time and across locations.
 - **Not a substitute for a professional appraisal**: this is a statistical estimate from historical patterns, not a certified valuation. It doesn't account for factors the dataset can't capture (recent renovations not reflected in the training era, local market conditions, negotiation, unique property defects, etc.).
 - **Limited test coverage**: the current suite covers the API surface and preprocessing shape, but not things like data drift or model performance monitoring over time.
-- **No prediction-level explainability**: the API returns a single number with no breakdown of which features drove the estimate (e.g. no SHAP values) -- planned next.
+- **SHAP dollar impacts are approximate**: `top_factors` uses a local linear approximation to convert log-space SHAP values to dollars (see [Key design decisions](#key-design-decisions)); it's reliable for ranking and rough magnitude, not as an exact dollar-for-dollar breakdown.
 - **Free-tier hosting**: the live demo sleeps after inactivity, so the first request after a quiet period can take 30-60 seconds.
 
 ## Contributing

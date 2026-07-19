@@ -184,20 +184,49 @@ error — a fail-loud rather than fail-silent design choice.
 ### 7.3 Containerization
 
 ```bash
-docker build -t house-price-api:1.1 .
-docker run -d --name house-price-container --restart unless-stopped -p 8000:8000 house-price-api:1.1
+docker build -t house-price-api:1.3 .
+docker run -d --name house-price-container --restart unless-stopped -p 8000:8000 house-price-api:1.3
 ```
 
 **Image optimization:** `xgboost`'s standard PyPI wheel pulls in a
 ~300MB GPU dependency (`nvidia-nccl-cu12`) that is never used by this
 CPU-only API. It is installed and removed within the same Docker layer,
-reducing the final image size from 1.8GB to 1.1GB — a ~39% reduction with
-no functional cost, since the layer caching means the large dependency
-never persists in the final image history.
+reducing the image size by ~700MB with no functional cost, since the
+layer caching means the large dependency never persists in the final
+image history.
 
 **Build caching:** `requirements.txt` is copied and installed in a layer
 before the application code is copied in, so code-only changes during
 development don't force a full dependency reinstall on rebuild.
+
+### 7.4 Per-prediction explainability (SHAP)
+
+Every `/predict` response includes a `top_factors` field: the 5 features
+that most influenced that specific prediction, computed with `shap.TreeExplainer`
+against the trained XGBoost model.
+
+```json
+{
+  "predicted_price": 158478.44,
+  "top_factors": [
+    {"feature": "OverallQual", "impact_usd": 24512.68},
+    {"feature": "YearsSinceRemodel", "impact_usd": -7060.09}
+  ]
+}
+```
+
+**A methodological caveat worth stating plainly:** the model predicts
+`log(SalePrice + 1)`, so raw SHAP values are additive in log-space, not
+in dollars. Converting them to a dollar figure requires inverting a
+non-linear function (`expm1`), through which SHAP values don't translate
+exactly. The dollar impact reported here is a **local linear
+approximation** — each SHAP value is scaled by `exp(predicted_log_price)`,
+the derivative of `expm1` at the predicted point. This is accurate for
+ranking features and estimating rough magnitude, but is not a
+mathematically exact decomposition of the dollar prediction, particularly
+for features with very large log-space contributions. This tradeoff is
+made explicit here and in the API's documentation rather than presenting
+an approximation as an exact figure.
 
 ---
 
@@ -206,13 +235,13 @@ development don't force a full dependency reinstall on rebuild.
 Being transparent about what's *not* done is part of a credible technical
 report:
 
-| Gap | Impact | Planned resolution |
+| Gap | Impact | Status |
 |---|---|---|
-| No automated tests | Regressions in the API or preprocessing logic wouldn't be caught automatically | Add `pytest` + `httpx` test client coverage for `/predict` |
-| No CI pipeline | No automatic verification on push/PR | Add a GitHub Actions workflow to run tests on every push |
-| Not deployed | Model is only runnable locally or via manually-run Docker | Deploy to a host (Render/Railway) or add a Streamlit demo |
-| No model interpretability tooling | Predictions aren't individually explainable | Add SHAP values for feature-level explanation per prediction |
+| SHAP dollar impacts are approximate | `top_factors` uses a local linear approximation to map log-space SHAP values to dollars, not an exact breakdown | Reliable for ranking/rough magnitude; documented as an approximation (Section 7.4) |
+| Limited test coverage | The suite covers API/preprocessing correctness, not data drift or performance monitoring over time | Resolved for correctness (Section 7.4/9); monitoring is future work |
 | Trained on 2006–2010 Ames, Iowa data | Won't generalize to other markets or time periods without retraining | Out of scope for this project; would require new labeled data |
+
+**Resolved since the initial version of this report:** automated tests (`pytest`), a CI pipeline (GitHub Actions), live deployment (Render), and per-prediction explainability (SHAP) have all since been added -- see Section 7.
 
 ---
 
