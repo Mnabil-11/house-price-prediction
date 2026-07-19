@@ -4,6 +4,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.139-009688)
 ![XGBoost](https://img.shields.io/badge/XGBoost-3.2-orange)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED)
+![Tests](https://github.com/Mnabil-11/house-price-prediction/actions/workflows/tests.yml/badge.svg)
 
 An end-to-end machine learning project that predicts a house's sale price from its features — from raw data exploration all the way to a containerized, deployed prediction API.
 
@@ -20,6 +21,7 @@ An end-to-end machine learning project that predicts a house's sale price from i
 - [Getting started](#getting-started)
 - [Using the API](#using-the-api)
 - [Running with Docker](#running-with-docker)
+- [Testing](#testing)
 - [Key design decisions](#key-design-decisions)
 - [Limitations](#limitations)
 - [Contributing](#contributing)
@@ -141,6 +143,16 @@ docker run -d --name house-price-container --restart unless-stopped -p 8000:8000
 
 The API is then available at http://127.0.0.1:8000/docs exactly like the local run above, isolated from whatever else is installed on the host machine.
 
+## Testing
+
+```bash
+pip install -r requirements-dev.txt
+cd api
+pytest -v
+```
+
+The suite covers the basic endpoints, the `/predict` happy path, input validation (type errors, out-of-range values), and that `preprocessing.py` produces the exact 244 columns the model expects. Tests run automatically on every push and pull request via [GitHub Actions](.github/workflows/tests.yml).
+
 ## Key design decisions
 
 - **NA is not always missing data**: for columns like `PoolQC` or `GarageType`, a blank value means "this house has no pool / no garage" rather than a data-entry gap, so they're imputed with `"None"`/`0` instead of a median.
@@ -154,8 +166,8 @@ The API is then available at http://127.0.0.1:8000/docs exactly like the local r
 
 - **Geographically and temporally narrow training data**: the model is trained on Ames, Iowa house sales from 2006–2010. Predictions for houses in other markets, or for the current year, are not reliable without retraining on local, up-to-date data — prices, construction norms, and neighborhood values shift over time and across locations.
 - **Not a substitute for a professional appraisal**: this is a statistical estimate from historical patterns, not a certified valuation. It doesn't account for factors the dataset can't capture (recent renovations not reflected in the training era, local market conditions, negotiation, unique property defects, etc.).
-- **No automated tests or CI**: there's no `pytest` suite or CI pipeline yet, so regressions in the API or preprocessing logic wouldn't be caught automatically.
-- **No prediction-level explainability**: the API returns a single number with no breakdown of which features drove the estimate (e.g. no SHAP values).
+- **Limited test coverage**: the current suite covers the API surface and preprocessing shape, but not things like data drift or model performance monitoring over time.
+- **No prediction-level explainability**: the API returns a single number with no breakdown of which features drove the estimate (e.g. no SHAP values) -- planned next.
 - **Free-tier hosting**: the live demo sleeps after inactivity, so the first request after a quiet period can take 30-60 seconds.
 
 ## Contributing
@@ -165,10 +177,10 @@ Contributions, bug reports, and suggestions are welcome.
 1. Fork the repo and create a branch from `main`: `git checkout -b feature/your-idea`
 2. Make your changes. If you touch the data pipeline (`notebooks/`) or `api/preprocessing.py`, keep the two in sync — the API mirrors the notebooks step-by-step, so a change to one without the other will silently break predictions.
 3. Run the notebooks in order (01 → 04) if you changed anything upstream of the model, so `models/xgboost_model.pkl` and `models/feature_columns.json` stay consistent with the code.
-4. Test the API locally (`uvicorn main:app --reload` or via Docker) before opening a PR.
+4. Run `pytest` (see [Testing](#testing)) and test the API locally before opening a PR.
 5. Open a pull request describing what changed and why.
 
-See [Limitations](#limitations) above for known gaps (no test suite yet) that are good first contributions.
+See [Limitations](#limitations) above for known gaps that are good first contributions.
 
 ## Progress
 

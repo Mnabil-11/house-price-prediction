@@ -9,7 +9,7 @@ import requests
 API_URL = "http://127.0.0.1:8000"
 
 house = {
-    "OverallQual": 15,
+    "OverallQual": 7,
     "GrLivArea": 1800,
     "Neighborhood": "CollgCr",
     "YearBuilt": 2005,
