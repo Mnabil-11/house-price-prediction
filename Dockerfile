@@ -22,4 +22,7 @@ WORKDIR /app/api
 
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Shell form (not exec array form) so $PORT is actually substituted -- cloud
+# hosts like Render assign their own port via this env var. Defaults to 8000
+# for local `docker run`, where PORT usually isn't set.
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
