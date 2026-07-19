@@ -5,7 +5,10 @@
 ![XGBoost](https://img.shields.io/badge/XGBoost-3.2-orange)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED)
 
-An end-to-end machine learning project that predicts a house's sale price from its features — from raw data exploration all the way to a containerized prediction API.
+An end-to-end machine learning project that predicts a house's sale price from its features — from raw data exploration all the way to a containerized, deployed prediction API.
+
+**Live demo:** https://house-price-prediction-obwh.onrender.com/docs
+(hosted on Render's free tier — the first request after a period of inactivity may take ~30-60s to wake up)
 
 ## Table of contents
 
@@ -155,4 +158,4 @@ The API is then available at http://127.0.0.1:8000/docs exactly like the local r
 - [x] Save best model
 - [x] FastAPI service
 - [x] Docker
-- [ ] Deployment
+- [x] Deployment (Render)
