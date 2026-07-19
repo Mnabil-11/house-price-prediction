@@ -22,6 +22,7 @@ An end-to-end machine learning project that predicts a house's sale price from i
 - [Running with Docker](#running-with-docker)
 - [Key design decisions](#key-design-decisions)
 - [Limitations](#limitations)
+- [Contributing](#contributing)
 - [Progress](#progress)
 - 📄 **[Read the full technical report](./MODEL_CARD.md)** — problem     statement, data handling rationale, model comparison, and honest discussion of limitations.
 
@@ -156,6 +157,18 @@ The API is then available at http://127.0.0.1:8000/docs exactly like the local r
 - **No automated tests or CI**: there's no `pytest` suite or CI pipeline yet, so regressions in the API or preprocessing logic wouldn't be caught automatically.
 - **No prediction-level explainability**: the API returns a single number with no breakdown of which features drove the estimate (e.g. no SHAP values).
 - **Free-tier hosting**: the live demo sleeps after inactivity, so the first request after a quiet period can take 30-60 seconds.
+
+## Contributing
+
+Contributions, bug reports, and suggestions are welcome.
+
+1. Fork the repo and create a branch from `main`: `git checkout -b feature/your-idea`
+2. Make your changes. If you touch the data pipeline (`notebooks/`) or `api/preprocessing.py`, keep the two in sync — the API mirrors the notebooks step-by-step, so a change to one without the other will silently break predictions.
+3. Run the notebooks in order (01 → 04) if you changed anything upstream of the model, so `models/xgboost_model.pkl` and `models/feature_columns.json` stay consistent with the code.
+4. Test the API locally (`uvicorn main:app --reload` or via Docker) before opening a PR.
+5. Open a pull request describing what changed and why.
+
+See [Limitations](#limitations) above for known gaps (no test suite yet) that are good first contributions.
 
 ## Progress
 
