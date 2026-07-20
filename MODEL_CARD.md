@@ -6,6 +6,60 @@
 
 ---
 
+## 0. Business Framing: What Would a Real Estate Company Gain?
+
+Strip away the ML terminology and the question a real estate business
+actually asks is simpler: *if an agency plugged this into their workflow
+tomorrow, what would change?*
+
+**Concretely:**
+
+- **Instant first-pass pricing.** An agent listing a new property, or a
+  buyer's agent screening 50 comparables, gets a defensible price estimate
+  in milliseconds instead of waiting on a formal appraisal (which can take
+  days and cost money for every property). This doesn't replace an
+  appraisal for closing a deal, but it replaces the informal "gut feel"
+  estimate agents currently use to have a first conversation with a client.
+- **Consistency across agents.** Two agents at the same firm often price
+  similar houses differently based on individual experience and bias. A
+  shared model applies the *same* pricing logic to every property, which
+  is a defensible, auditable standard rather than "whoever priced it felt
+  X."
+- **Explainable, not a black box (Section 7.4).** Because every prediction
+  comes with its top 5 price drivers, an agent can tell a client *why* a
+  number came out the way it did ("your kitchen finish quality is pulling
+  the estimate down relative to comparable listings") — turning a number
+  into a conversation and a concrete renovation recommendation, not just a
+  verdict.
+- **Scales without headcount.** The API can screen an entire portfolio or
+  a new batch of listings overnight, something that isn't feasible to do
+  manually appraisal-by-appraisal.
+
+**What it doesn't replace:** licensed appraisals for financing/legal
+purposes, on-the-ground market knowledge of a specific street, or
+negotiation. See [Limitations](#8-limitations--next-steps) for where this
+tool's judgment should be treated as a starting point, not a final word.
+
+### What actually moves the price? (Top 3 factors, in practice)
+
+The trained model's feature importances (gain-based, from the saved
+XGBoost model) and the correlation analysis from EDA (Section 4 /
+`notebooks/01_eda.ipynb`) agree on the same three drivers dominating the
+prediction:
+
+| Rank | Factor | Why it matters (business translation) |
+|---|---|---|
+| 1 | **Overall quality/finish level** (`OverallQual`) | By far the single largest lever in the model (~19% of total decision weight — more than the next 3 factors combined) and the strongest raw correlation with price (0.79). **Recommendation:** before listing, a pre-sale inspection focused on visible finish quality (kitchen, bath, materials) is the highest-leverage renovation spend an agency can recommend — it outweighs almost any other single upgrade in this dataset's pricing pattern. |
+| 2 | **Total finished living space** (`TotalSF` — basement + 1st + 2nd floor combined) | Second-highest importance, and closely tracks `GrLivArea`'s 0.71 correlation with price. **Recommendation:** an unfinished basement or attic is a quantifiable pricing gap, not just extra storage — flag it to sellers as a specific, costed renovation ROI opportunity, and to buyers as underpriced upside if a comparable listing hasn't finished that space yet. |
+| 3 | **Garage capacity** (`GarageCars`) | Consistently among the top predictors in both the correlation analysis (0.64) and the model's importance ranking. **Recommendation:** a 1-car garage in a neighborhood where 2-car is the norm is a specific, identifiable underpricing signal an agent can point to — either as a negotiation lever for buyers or a targeted improvement for sellers, rather than a vague "the market is what it is."|
+
+The common thread across all three: **the model isn't just producing a
+number, it's pointing at where renovation or negotiation effort is
+actually worth spending**, which is the difference between a pricing tool
+and a pricing *decision-support* tool.
+
+---
+
 ## 1. Executive Summary
 
 This project delivers a complete machine learning system that predicts a
@@ -20,8 +74,10 @@ log-transformed target. The system is packaged as a Docker image and
 exposes a validated, documented HTTP endpoint that returns a prediction in
 milliseconds.
 
-**Status:** Feature-complete through serving and containerization.
-Production deployment is the one remaining step (see Section 8).
+**Status:** Deployed and live at
+[house-price-prediction-obwh.onrender.com](https://house-price-prediction-obwh.onrender.com/docs),
+with automated tests running on every push (Section 7) and per-prediction
+explainability via SHAP (Section 7.4). See Section 8 for known limitations.
 
 ---
 
