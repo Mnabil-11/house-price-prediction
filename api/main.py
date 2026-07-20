@@ -1,14 +1,21 @@
 """FastAPI service that predicts a house's sale price using the saved XGBoost model."""
 
+import logging
 from pathlib import Path
 
 import joblib
 import numpy as np
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 from schemas import HouseFeatures, PredictionResponse
 from preprocessing import preprocess
 from explainer import build_explainer, top_contributions
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+logger = logging.getLogger("house_price_api")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 MODEL_PATH = BASE_DIR / "models" / "xgboost_model.pkl"
@@ -19,8 +26,15 @@ app = FastAPI(
     version="1.1.0",
 )
 
+logger.info("Loading model from %s", MODEL_PATH)
 model = joblib.load(MODEL_PATH)
 explainer = build_explainer(model)
+logger.info("Model and SHAP explainer loaded successfully")
+
+# Simple in-process counter. Resets on restart and isn't shared across
+# workers/replicas -- fine for observability on this single-instance
+# deployment, not a substitute for a real metrics backend at higher scale.
+prediction_count = 0
 
 
 @app.get("/")
@@ -30,16 +44,30 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy"}
+    return {"status": "healthy", "predictions_served": prediction_count}
 
 
 @app.post("/predict", response_model=PredictionResponse)
 def predict(house: HouseFeatures):
-    row = preprocess(house.model_dump(by_alias=True))
-    pred_log = model.predict(row)[0]
-    pred_price = np.expm1(pred_log)  # undo the log1p transform from training
+    global prediction_count
 
-    factors = top_contributions(explainer, row, pred_log, top_n=5)
+    try:
+        row = preprocess(house.model_dump(by_alias=True))
+        pred_log = model.predict(row)[0]
+        pred_price = np.expm1(pred_log)  # undo the log1p transform from training
+        factors = top_contributions(explainer, row, pred_log, top_n=5)
+    except Exception:
+        logger.error(
+            "Prediction failed for OverallQual=%s, GrLivArea=%s",
+            house.OverallQual, house.GrLivArea, exc_info=True,
+        )
+        raise HTTPException(status_code=500, detail="Prediction failed")
+
+    prediction_count += 1
+    logger.info(
+        "Prediction #%d: OverallQual=%s GrLivArea=%s -> $%.2f",
+        prediction_count, house.OverallQual, house.GrLivArea, pred_price,
+    )
 
     return PredictionResponse(
         predicted_price=round(float(pred_price), 2),
