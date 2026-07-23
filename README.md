@@ -165,7 +165,7 @@ cd api
 pytest -v
 ```
 
-The suite covers the basic endpoints, the `/predict` happy path, input validation (type errors, out-of-range values), and that `preprocessing.py` produces the exact 244 columns the model expects. Tests run automatically on every push and pull request via [GitHub Actions](.github/workflows/tests.yml).
+The suite covers the basic endpoints, the `/predict` happy path, input validation (type errors, out-of-range values), rate limiting, and that `preprocessing.py` produces the exact 244 columns the model expects. Tests run automatically on every push and pull request via [GitHub Actions](.github/workflows/tests.yml).
 
 ## Key design decisions
 
@@ -177,6 +177,7 @@ The suite covers the basic endpoints, the `/predict` happy path, input validatio
 - **Lean image**: `xgboost`'s wheel pulls in a ~300MB GPU dependency (`nvidia-nccl-cu12`) that this CPU-only API never uses; it's installed and removed in the same Docker layer, cutting the final image from 1.8GB to 1.1GB.
 - **Per-prediction explainability via SHAP**: `TreeExplainer` gives exact feature attributions in the model's native log-space. Since `expm1` (used to convert back to dollars) is non-linear, each SHAP value is converted to an approximate dollar impact using a local linear approximation (scaling by `exp(predicted_log_price)`) rather than a mathematically exact dollar breakdown -- accurate enough to rank and explain the main drivers, called out explicitly as an approximation rather than presented as exact.
 - **Application-level logging**: beyond uvicorn's default HTTP access logs, the app logs model/explainer startup, a running prediction counter (also exposed at `/health` as `predictions_served`), and full stack traces on prediction failures -- so a deployed instance's behavior is diagnosable from logs alone, without needing to reproduce the issue locally.
+- **Rate limiting on `/predict`**: each call runs XGBoost inference *and* a SHAP explanation, so it's not a free endpoint. It's capped at 20 requests/minute per client IP (via `slowapi`); `/` and `/health` stay unlimited since Render's uptime checks poll them continuously.
 
 ## Limitations
 

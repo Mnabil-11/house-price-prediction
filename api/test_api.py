@@ -81,6 +81,24 @@ def test_predict_rejects_negative_area():
     assert response.status_code == 422
 
 
+# --- rate limiting -----------------------------------------------------------
+
+def test_predict_rate_limit_eventually_kicks_in():
+    """/predict is limited to 20 requests/minute per client. This test doesn't
+    assume an exact request count (earlier tests in this module already used
+    some of the budget against the same shared TestClient/app instance), it
+    just keeps calling until a 429 shows up, which it must within a generous
+    margin. Placed last among /predict tests since it exhausts the limit."""
+    statuses = []
+    for _ in range(30):
+        response = client.post("/predict", json={"OverallQual": 5})
+        statuses.append(response.status_code)
+        if response.status_code == 429:
+            break
+
+    assert 429 in statuses
+
+
 # --- preprocessing ---------------------------------------------------------
 
 def test_preprocess_output_matches_trained_feature_columns():

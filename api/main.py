@@ -5,7 +5,10 @@ from pathlib import Path
 
 import joblib
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from schemas import HouseFeatures, PredictionResponse
 from preprocessing import preprocess
@@ -25,6 +28,13 @@ app = FastAPI(
     description="Predicts a house's sale price from its features using a trained XGBoost model.",
     version="1.1.0",
 )
+
+# /predict runs XGBoost + SHAP on every call -- not free -- so it's rate
+# limited per client IP. /health and / are left unlimited since Render's
+# uptime checks poll them continuously.
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 logger.info("Loading model from %s", MODEL_PATH)
 model = joblib.load(MODEL_PATH)
@@ -48,7 +58,8 @@ def health():
 
 
 @app.post("/predict", response_model=PredictionResponse)
-def predict(house: HouseFeatures):
+@limiter.limit("20/minute")
+def predict(request: Request, house: HouseFeatures):
     global prediction_count
 
     try:
